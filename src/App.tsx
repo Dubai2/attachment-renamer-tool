@@ -27,6 +27,7 @@ function App() {
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const [result, setResult] = useState<{ success: number; failed: number; skipped: number; preview: Array<{oldName: string; newName: string}> } | null>(null)
   const [searchResult, setSearchResult] = useState<Array<{ recordId: string; attachment: Attachment }> | null>(null)
+  const [hasSearched, setHasSearched] = useState(false)
   const [debugInfo, setDebugInfo] = useState<string>('')
 
   useEffect(() => {
@@ -82,7 +83,7 @@ function App() {
     }
   }
 
-  const handleRename = async () => {
+	const handleSearch = async () => {
     if (!selectedFieldId) {
       setError('请先选择附件字段')
       return
@@ -91,17 +92,17 @@ function App() {
     try {
       setProcessing(true)
       setError(null)
+      setSearchResult(null)
       setResult(null)
+      setHasSearched(false)
 
       const table = await bitable.base.getActiveTable()
       const field = await table.getField(selectedFieldId)
       const recordIds = await table.getRecordIdList()
-      const total = recordIds.length
 
-      console.log('开始重命名，总记录数:', total)
+      console.log('开始查找，总记录数:', recordIds.length)
 
-      // 第一步：收集所有附件，找到最大序号
-      console.log('第一步：扫描所有附件...')
+      // 收集所有附件
       const allAttachments: Array<{ recordId: string; attachment: Attachment }> = []
       
       for (const recordId of recordIds) {
@@ -115,9 +116,62 @@ function App() {
       
       console.log(`共找到 ${allAttachments.length} 个附件`)
       
+      // 查找不符合前缀的附件
+      const needRename = allAttachments.filter(({ attachment }) => {
+        if (!prefix) return true // 没有前缀，全部需要重命名
+        return !attachment.name.startsWith(prefix + '_')
+      })
+      
+      console.log(`找到 ${needRename.length} 个需要重命名的附件`)
+      
+      setSearchResult(needRename)
+      setHasSearched(true)
+      setProcessing(false)
+    } catch (err) {
+      console.error('查找失败:', err)
+      setError(`查找失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      setProcessing(false)
+    }
+  }
+
+  const handleReset = () => {
+    setSearchResult(null)
+    setResult(null)
+    setHasSearched(false)
+  }
+
+  const handleRename = async () => {
+    if (!searchResult || searchResult.length === 0) {
+      setError('请先查找需要重命名的附件')
+      return
+    }
+
+    try {
+      setProcessing(true)
+      setError(null)
+      setResult(null)
+
+      const table = await bitable.base.getActiveTable()
+      const field = await table.getField(selectedFieldId)
+
+      console.log('开始重命名，待处理附件数:', searchResult.length)
+
       // 找到符合当前前缀的最大序号
-      let maxNumber = startNumber - 1 // 默认从用户设置的起始号开始
+      let maxNumber = startNumber - 1
       if (prefix) {
+        // 需要扫描所有附件来找到最大序号
+        const allAttachments: Array<{ recordId: string; attachment: Attachment }> = []
+        const recordIds = await table.getRecordIdList()
+        
+        for (const recordId of recordIds) {
+          const attachments = await field.getValue(recordId) as Attachment[] | null
+          if (attachments && attachments.length > 0) {
+            attachments.forEach(att => {
+              allAttachments.push({ recordId, attachment: att })
+            })
+          }
+        }
+        
         allAttachments.forEach(({ attachment }) => {
           const name = attachment.name
           if (name.startsWith(prefix + '_')) {
@@ -130,46 +184,35 @@ function App() {
             }
           }
         })
+        
         console.log(`最大序号: ${maxNumber}, 将从 ${maxNumber + 1} 开始`)
       }
       
-      let globalIndex = maxNumber + 1
+      const startIndex = maxNumber + 1 // 固定起始序号
       
-      // 第二步：筛选不符合前缀的附件
-      console.log('第二步：筛选不符合前缀的附件...')
-      const needRename = allAttachments.filter(({ attachment }) => {
-        if (!prefix) return true // 没有前缀，全部需要重命名
-        return !attachment.name.startsWith(prefix + '_')
-      })
-      
-      console.log(`需要重命名 ${needRename.length} 个附件`)
-      
-      // 显示预览（前10个）
-      const preview = needRename.slice(0, 10).map(({ attachment }) => {
+      // 生成预览（使用独立的序号）
+      let previewIndex = startIndex
+      const preview = searchResult.slice(0, 10).map(({ attachment }) => {
         const originalName = attachment.name
         const lastDot = originalName.lastIndexOf('.')
         const ext = lastDot > 0 ? originalName.substring(lastDot) : ''
-        const newName = prefix ? `${prefix}_${globalIndex}${ext}` : `${globalIndex}${ext}`
+        const newName = prefix ? `${prefix}_${previewIndex}${ext}` : `${previewIndex}${ext}`
         const previewItem = { oldName: originalName, newName: newName }
-        globalIndex++
+        previewIndex++
         return previewItem
       })
       
       console.log('预览:', preview)
       
-      // 第三步：执行重命名
-      console.log('第三步：开始重命名...')
-      let successCount = 0
-      let failedCount = 0
-      let skippedCount = 0
-      
-      // 按记录分组
+      // 按记录分组（使用相同的起始序号）
       const recordMap = new Map<string, Array<Attachment>>()
-      needRename.forEach(({ recordId, attachment }) => {
+      let renameIndex = startIndex // 使用相同的起始序号
+      
+      searchResult.forEach(({ recordId, attachment }) => {
         const originalName = attachment.name
         const lastDot = originalName.lastIndexOf('.')
         const ext = lastDot > 0 ? originalName.substring(lastDot) : ''
-        const newName = prefix ? `${prefix}_${globalIndex}${ext}` : `${globalIndex}${ext}`
+        const newName = prefix ? `${prefix}_${renameIndex}${ext}` : `${renameIndex}${ext}`
         
         const renamedAttachment = { ...attachment, name: newName }
         
@@ -178,13 +221,18 @@ function App() {
         }
         recordMap.get(recordId)!.push(renamedAttachment)
         
-        globalIndex++
+        renameIndex++
       })
       
       // 更新记录
+      const recordIds = await table.getRecordIdList()
+      let successCount = 0
+      let failedCount = 0
+      let skippedCount = 0
+      
       for (let i = 0; i < recordIds.length; i++) {
         const recordId = recordIds[i]
-        setProgress({ current: i + 1, total })
+        setProgress({ current: i + 1, total: recordIds.length })
         
         if (recordMap.has(recordId)) {
           try {
@@ -198,7 +246,7 @@ function App() {
         }
       }
       
-      skippedCount = allAttachments.length - needRename.length
+      skippedCount = searchResult.length - (successCount + failedCount)
 
       setResult({ 
         success: successCount, 
@@ -206,11 +254,11 @@ function App() {
         skipped: skippedCount,
         preview: preview
       })
+      setSearchResult(null) // 清空查找结果
       setProgress(null)
       setProcessing(false)
     } catch (err) {
-      console.error('Rename failed:', err)
-      console.error('错误详情:', JSON.stringify(err, null, 2))
+      console.error('重命名失败:', err)
       setError(`重命名失败: ${err instanceof Error ? err.message : '未知错误'}`)
       setProcessing(false)
       setProgress(null)
@@ -289,33 +337,106 @@ function App() {
             id="prefix"
             type="text"
             value={prefix}
-            onChange={(e) => setPrefix(e.target.value)}
+            onChange={(e) => {
+              setPrefix(e.target.value)
+              setSearchResult(null)
+              setResult(null)
+              setHasSearched(false)
+            }}
             placeholder="留空则只保留序号"
             disabled={processing}
           />
           <span className="hint">例如：输入 "doc"，结果为 "doc_1.jpg"</span>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="start-number">起始序号</label>
-          <input
-            id="start-number"
-            type="number"
-            min="0"
-            value={startNumber}
-            onChange={(e) => setStartNumber(parseInt(e.target.value) || 0)}
-            disabled={processing}
-          />
-          <span className="hint">附件将从该数字开始编号</span>
-        </div>
+        {/* 只有没查找过才显示查找按钮 */}
+        {!hasSearched && (
+          <button
+            onClick={handleSearch}
+            disabled={processing || !selectedFieldId}
+            className="btn btn-primary btn-large"
+          >
+            {processing ? '查找中...' : '🔍 查找无前缀文件'}
+          </button>
+        )}
 
-        <button
-          onClick={handleRename}
-          disabled={processing || !selectedFieldId}
-          className="btn btn-primary btn-large"
-        >
-          {processing ? '处理中...' : '开始重命名'}
-        </button>
+        {/* 查找结果显示 */}
+        {hasSearched && searchResult && searchResult.length > 0 && (
+          <div style={{ padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '4px', marginBottom: '20px' }}>
+            <h3 style={{ margin: '0 0 15px 0', color: '#1a73e8' }}>
+              🔍 查找结果
+            </h3>
+            <p style={{ fontSize: '14px', marginBottom: '10px', color: '#333' }}>
+              找到 <strong style={{ color: '#1a73e8' }}>{searchResult.length}</strong> 个不符合前缀"{prefix}"的附件
+            </p>
+            <div style={{ maxHeight: '300px', overflowY: 'auto', backgroundColor: '#fff', padding: '10px', borderRadius: '4px', border: '1px solid #d1d5db' }}>
+              {searchResult.map((item, index) => (
+                <div key={index} style={{ fontSize: '13px', marginBottom: '5px', padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '3px', borderBottom: index < searchResult.length - 1 ? '1px solid #e9ecef' : 'none' }}>
+                  {index + 1}. {item.attachment.name}
+                </div>
+              ))}
+            </div>
+            
+            {/* 重新查找按钮 */}
+            <button
+              onClick={handleReset}
+              disabled={processing}
+              style={{ marginTop: '10px', padding: '8px 16px', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}
+            >
+              ← 重新查找
+            </button>
+          </div>
+        )}
+
+        {/* 只有查找后才显示起始序号和确认重命名按钮 */}
+        {hasSearched && (
+          <div className="form-group">
+            <label htmlFor="start-number">起始序号</label>
+            <input
+              id="start-number"
+              type="number"
+              min="0"
+              value={startNumber}
+              onChange={(e) => setStartNumber(parseInt(e.target.value) || 0)}
+              disabled={processing}
+            />
+            <span className="hint">附件将从该数字开始编号</span>
+          </div>
+        )}
+
+        {hasSearched && searchResult && searchResult.length > 0 && (
+          <button
+            onClick={handleRename}
+            disabled={processing || !searchResult || searchResult.length === 0}
+            className="btn btn-success btn-large"
+            style={{ backgroundColor: '#52c41a' }}
+          >
+            {processing ? '处理中...' : '✓ 确认重命名'}
+          </button>
+        )}
+
+        {hasSearched && (!searchResult || searchResult.length === 0) && (
+          <div style={{ padding: '15px', backgroundColor: '#d1e7dd', borderRadius: '4px', marginBottom: '20px' }}>
+            <h3 style={{ margin: '0 0 15px 0', color: '#721c24' }}>
+              📋 查找结果
+            </h3>
+            <p style={{ fontSize: '14px', color: '#721c24' }}>
+              没有找到不符合前缀"{prefix}"的附件
+            </p>
+            <p style={{ fontSize: '13px', color: '#666', marginTop: '10px' }}>
+              所有附件都已经有此前缀，无需重命名
+            </p>
+            
+            {/* 重新查找按钮 */}
+            <button
+              onClick={handleReset}
+              disabled={processing}
+              style={{ marginTop: '10px', padding: '8px 16px', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}
+            >
+              ← 重新查找
+            </button>
+          </div>
+        )}
 
         {progress && (
           <div className="progress-box">
