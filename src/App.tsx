@@ -34,7 +34,8 @@ function App() {
     initPlugin()
   }, [])
 
-  const initPlugin = async () => {
+  const initPlugin = async (e?: React.MouseEvent) => {
+    e?.stopPropagation()
     try {
       setLoading(true)
       setError(null)
@@ -83,7 +84,8 @@ function App() {
     }
   }
 
-	const handleSearch = async () => {
+	const handleSearch = async (e?: React.MouseEvent) => {
+    e?.stopPropagation()
     if (!selectedFieldId) {
       setError('请先选择附件字段')
       return
@@ -134,13 +136,15 @@ function App() {
     }
   }
 
-  const handleReset = () => {
+  const handleReset = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
     setSearchResult(null)
     setResult(null)
     setHasSearched(false)
   }
 
-  const handleRename = async () => {
+  const handleRename = async (e?: React.MouseEvent) => {
+    e?.stopPropagation()
     if (!searchResult || searchResult.length === 0) {
       setError('请先查找需要重命名的附件')
       return
