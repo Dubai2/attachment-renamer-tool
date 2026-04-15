@@ -110,16 +110,29 @@ function LinkGeneratorPage({ onBack }: { onBack: () => void }) {
 
         for (const recordId of batch) {
           try {
-            // 生成记录链接：https://domain/record/{recordId}
-            const recordLink = `https://lpitp64gvb.feishu.cn/record/${recordId}`
+            // 使用 bitable.bridge.getBitableUrl 生成正确的记录链接
+            // fieldId 参数是必需的，传入空字符串表示不定位到特定字段
+            const recordLink = await bitable.bridge.getBitableUrl({
+              tableId: tableId,
+              viewId: viewId,
+              recordId: recordId,
+              fieldId: '' // 不定位到特定字段
+            })
 
             console.log(`记录 ${recordId} 链接:`, recordLink)
+            console.log(`尝试写入字段: ${selectedFieldId}`)
 
             // 写入到指定字段
             await table.setCellValue(recordId, selectedFieldId, recordLink)
+            console.log(`记录 ${recordId} 写入成功`)
             successCount++
           } catch (err) {
             console.error(`记录 ${recordId} 更新失败:`, err)
+            console.error(`错误详情:`, {
+              recordId,
+              fieldId: selectedFieldId,
+              errorMessage: err instanceof Error ? err.message : err
+            })
             failedCount++
           }
         }
