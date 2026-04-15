@@ -122,11 +122,10 @@ function App() {
               console.log(`重命名: ${originalName} -> ${newName}`)
               globalIndex++
 
+              // 保留原始附件的所有属性，只修改name字段
               return {
-                file_token: att.file_token,
-                name: newName,
-                size: att.size,
-                mime_type: att.mime_type
+                ...att,
+                name: newName
               }
             })
 
