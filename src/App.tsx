@@ -26,6 +26,7 @@ function App() {
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const [result, setResult] = useState<{ success: number; failed: number; skipped: number; preview: Array<{oldName: string; newName: string}> } | null>(null)
+  const [searchResult, setSearchResult] = useState<Array<{ recordId: string; attachment: Attachment }> | null>(null)
   const [debugInfo, setDebugInfo] = useState<string>('')
 
   useEffect(() => {
