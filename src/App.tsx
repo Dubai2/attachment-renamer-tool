@@ -26,6 +26,7 @@ function App() {
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const [result, setResult] = useState<{ success: number; failed: number } | null>(null)
+  const [debugInfo, setDebugInfo] = useState<string>('')
 
   useEffect(() => {
     initPlugin()
@@ -35,13 +36,24 @@ function App() {
     try {
       setLoading(true)
       setError(null)
+      setDebugInfo('')
 
       const table = await bitable.base.getActiveTable()
+      setDebugInfo(prev => prev + '✓ Got active table\n')
+
       const fields = await table.getFieldMetaList()
+      setDebugInfo(prev => prev + `✓ Got ${fields.length} fields total:\n`)
+
+      // 打印所有字段信息
+      const fieldsInfo = fields.map(f => `  - ${f.name} (type: ${f.type})`).join('\n')
+      setDebugInfo(prev => prev + fieldsInfo + '\n')
+
       const attachmentFieldsList = fields.filter(f => f.type === ATTACHMENT_FIELD_TYPE)
+      setDebugInfo(prev => prev + `✓ Found ${attachmentFieldsList.length} attachment fields (type=${ATTACHMENT_FIELD_TYPE})\n`)
 
       if (attachmentFieldsList.length === 0) {
-        setError('No attachment field found')
+        setError('No attachment field found. See debug info below for details.')
+        setDebugInfo(prev => prev + '\n❌ No attachment field type 19 found in table!')
         setLoading(false)
         return
       }
@@ -51,15 +63,20 @@ function App() {
         name: f.name,
         type: f.type
       })))
+      setDebugInfo(prev => prev + `✓ Set ${attachmentFieldsList.length} attachment fields\n`)
 
       if (attachmentFieldsList.length > 0) {
         setSelectedFieldId(attachmentFieldsList[0].id)
+        setDebugInfo(prev => prev + `✓ Selected default field: ${attachmentFieldsList[0].name}\n`)
       }
 
       setLoading(false)
     } catch (err) {
       console.error('Initialization failed:', err)
-      setError(`Initialization failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+      const errorStack = err instanceof Error ? err.stack : ''
+      setDebugInfo(prev => prev + `\n❌ Error: ${errorMsg}\nStack: ${errorStack}`)
+      setError(`Initialization failed: ${errorMsg}`)
       setLoading(false)
     }
   }
@@ -150,6 +167,21 @@ function App() {
             Reload
           </button>
         </div>
+        {debugInfo && (
+          <div className="debug-box">
+            <h4>Debug Information</h4>
+            <pre style={{
+              backgroundColor: '#f5f5f5',
+              padding: '10px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word'
+            }}>
+              {debugInfo}
+            </pre>
+          </div>
+        )}
       </div>
     )
   }
