@@ -25,7 +25,7 @@ function App() {
   const [startNumber, setStartNumber] = useState<number>(1)
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
-  const [result, setResult] = useState<{ success: number; failed: number } | null>(null)
+  const [result, setResult] = useState<{ success: number; failed: number; skipped: number } | null>(null)
   const [debugInfo, setDebugInfo] = useState<string>('')
 
   useEffect(() => {
@@ -101,6 +101,7 @@ function App() {
 
       let successCount = 0
       let failedCount = 0
+      let skippedCount = 0
       let globalIndex = startNumber
 
       for (let i = 0; i < recordIds.length; i++) {
@@ -116,6 +117,14 @@ function App() {
           if (attachments && attachments.length > 0) {
             const renamedAttachments = attachments.map((att) => {
               const originalName = att.name || 'unnamed'
+              
+              // 检查是否已经有指定前缀
+              if (prefix && originalName.startsWith(prefix + '_')) {
+                console.log(`跳过: ${originalName} (已有前缀 ${prefix})`)
+                skippedCount++
+                return att  // 不修改，直接返回原始附件对象
+              }
+
               const lastDot = originalName.lastIndexOf('.')
               const ext = lastDot > 0 ? originalName.substring(lastDot) : ''
               const newName = prefix ? `${prefix}_${globalIndex}${ext}` : `${globalIndex}${ext}`
@@ -129,9 +138,17 @@ function App() {
               }
             })
 
-            await field.setValue(recordId, renamedAttachments)
-            console.log(`记录 ${recordId} 更新成功`)
-            successCount++
+            // 检查是否有需要重命名的附件
+            const hasModifiedAttachments = renamedAttachments.some(att => att.name !== (attachments.find(a => a.file_token === att.file_token)?.name))
+            
+            if (hasModifiedAttachments) {
+              await field.setValue(recordId, renamedAttachments)
+              console.log(`记录 ${recordId} 更新成功`)
+              successCount++
+            } else {
+              console.log(`记录 ${recordId} 所有附件都有前缀，跳过`)
+              skippedCount++
+            }
           }
         } catch (err) {
           console.error(`Failed to process record ${recordId}:`, err)
@@ -140,7 +157,7 @@ function App() {
         }
       }
 
-      setResult({ success: successCount, failed: failedCount })
+      setResult({ success: successCount, failed: failedCount, skipped: skippedCount })
       setProgress(null)
       setProcessing(false)
     } catch (err) {
@@ -272,6 +289,9 @@ function App() {
             <p>成功：<strong>{result.success}</strong> 条记录</p>
             {result.failed > 0 && (
               <p>失败：<strong>{result.failed}</strong> 条记录</p>
+            )}
+            {result.skipped > 0 && (
+              <p>跳过：<strong>{result.skipped}</strong> 个附件（已有前缀）</p>
             )}
           </div>
         )}
