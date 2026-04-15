@@ -10,22 +10,51 @@
 
 /* 头部 */
 .header {
-  text-align: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px solid #e5e5e5;
 }
 
-.header h1 {
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+}
+
+.header-content h1 {
   font-size: 20px;
   font-weight: 600;
   color: #1f2329;
   margin-bottom: 4px;
 }
 
-.header .subtitle {
+.header-content .subtitle {
   font-size: 13px;
   color: #86909c;
+}
+
+/* 退出登录按钮 */
+.logout-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ff4d4f;
+  background: #fff;
+  border: 1px solid #ff4d4f;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.logout-btn:hover {
+  background: #ff4d4f;
+  color: #fff;
+}
+
+.logout-btn:active {
+  background: #cf1322;
 }
 
 /* 主内容区 */
@@ -251,8 +280,18 @@
     padding: 16px;
   }
 
-  .header h1 {
+  .header-content h1 {
     font-size: 18px;
+  }
+
+  .logout-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
