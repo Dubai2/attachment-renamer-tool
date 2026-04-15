@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { bitable } from '@lark-base-open/js-sdk'
 
-const ATTACHMENT_FIELD_TYPE = 19
+const ATTACHMENT_FIELD_TYPE = 17
 
 interface AttachmentField {
   field_id: string
