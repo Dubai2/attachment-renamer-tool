@@ -97,6 +97,8 @@ function App() {
       const recordIds = await table.getRecordIdList()
       const total = recordIds.length
 
+      console.log('开始重命名，总记录数:', total)
+
       let successCount = 0
       let failedCount = 0
       let globalIndex = startNumber
@@ -107,7 +109,9 @@ function App() {
         setProgress({ current: i + 1, total })
 
         try {
+          console.log(`处理记录 ${i+1}/${total}, recordId: ${recordId}`)
           const attachments = await field.getValue(recordId) as Attachment[] | null
+          console.log(`获取到附件数量:`, attachments?.length || 0)
 
           if (attachments && attachments.length > 0) {
             const renamedAttachments = attachments.map((att) => {
@@ -115,6 +119,7 @@ function App() {
               const lastDot = originalName.lastIndexOf('.')
               const ext = lastDot > 0 ? originalName.substring(lastDot) : ''
               const newName = prefix ? `${prefix}_${globalIndex}${ext}` : `${globalIndex}${ext}`
+              console.log(`重命名: ${originalName} -> ${newName}`)
               globalIndex++
 
               return {
@@ -126,10 +131,12 @@ function App() {
             })
 
             await field.setValue(recordId, renamedAttachments)
+            console.log(`记录 ${recordId} 更新成功`)
             successCount++
           }
         } catch (err) {
           console.error(`Failed to process record ${recordId}:`, err)
+          console.error('错误详情:', JSON.stringify(err, null, 2))
           failedCount++
         }
       }
@@ -139,7 +146,8 @@ function App() {
       setProcessing(false)
     } catch (err) {
       console.error('Rename failed:', err)
-      setError(`Rename failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      console.error('错误详情:', JSON.stringify(err, null, 2))
+      setError(`重命名失败: ${err instanceof Error ? err.message : '未知错误'}`)
       setProcessing(false)
       setProgress(null)
     }
