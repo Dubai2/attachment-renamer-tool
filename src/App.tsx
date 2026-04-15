@@ -52,8 +52,8 @@ function App() {
       setDebugInfo(prev => prev + `✓ Found ${attachmentFieldsList.length} attachment fields (type=${ATTACHMENT_FIELD_TYPE})\n`)
 
       if (attachmentFieldsList.length === 0) {
-        setError('No attachment field found. See debug info below for details.')
-        setDebugInfo(prev => prev + '\n❌ No attachment field type 19 found in table!')
+        setError('未找到附件字段，请查看下方调试信息')
+        setDebugInfo(prev => prev + '\n❌ 未找到附件字段！')
         setLoading(false)
         return
       }
@@ -83,7 +83,7 @@ function App() {
 
   const handleRename = async () => {
     if (!selectedFieldId) {
-      setError('Please select an attachment field first')
+      setError('请先选择附件字段')
       return
     }
 
@@ -150,7 +150,7 @@ function App() {
       <div className="container">
         <div className="loading">
           <div className="spinner"></div>
-          <p>Initializing plugin...</p>
+          <p>正在初始化插件...</p>
         </div>
       </div>
     )
@@ -160,16 +160,16 @@ function App() {
     return (
       <div className="container">
         <div className="error-box">
-          <h3>Error</h3>
+          <h3>错误</h3>
           <p>{error}</p>
-          <p className="hint">Please ensure this plugin is opened from the Feishu Bitable plugin entry</p>
+          <p className="hint">请确保从飞书多维表格插件的正确入口打开</p>
           <button onClick={initPlugin} className="btn btn-primary">
-            Reload
+            重新加载
           </button>
         </div>
         {debugInfo && (
           <div className="debug-box">
-            <h4>Debug Information</h4>
+            <h4>调试信息</h4>
             <pre style={{
               backgroundColor: '#f5f5f5',
               padding: '10px',
@@ -189,13 +189,13 @@ function App() {
   return (
     <div className="container">
       <header className="header">
-        <h1>Attachment Batch Rename</h1>
-        <p className="subtitle">Feishu Bitable Plugin</p>
+        <h1>附件批量重命名</h1>
+        <p className="subtitle">飞书多维表格插件</p>
       </header>
 
       <main className="main">
         <div className="form-group">
-          <label htmlFor="field-select">Select Attachment Field</label>
+          <label htmlFor="field-select">选择附件字段</label>
           <select
             id="field-select"
             value={selectedFieldId}
@@ -208,24 +208,24 @@ function App() {
               </option>
             ))}
           </select>
-          <span className="field-count">{attachmentFields.length} attachment fields found</span>
+          <span className="field-count">找到 {attachmentFields.length} 个附件字段</span>
         </div>
 
         <div className="form-group">
-          <label htmlFor="prefix">File Name Prefix</label>
+          <label htmlFor="prefix">文件名前缀</label>
           <input
             id="prefix"
             type="text"
             value={prefix}
             onChange={(e) => setPrefix(e.target.value)}
-            placeholder="Leave empty to keep only the serial number"
+            placeholder="留空则只保留序号"
             disabled={processing}
           />
-          <span className="hint">e.g. enter "doc", result is "doc_1.jpg"</span>
+          <span className="hint">例如：输入 "doc"，结果为 "doc_1.jpg"</span>
         </div>
 
         <div className="form-group">
-          <label htmlFor="start-number">Start Number</label>
+          <label htmlFor="start-number">起始序号</label>
           <input
             id="start-number"
             type="number"
@@ -234,7 +234,7 @@ function App() {
             onChange={(e) => setStartNumber(parseInt(e.target.value) || 0)}
             disabled={processing}
           />
-          <span className="hint">Attachments will be numbered from this value</span>
+          <span className="hint">附件将从该数字开始编号</span>
         </div>
 
         <button
@@ -242,13 +242,13 @@ function App() {
           disabled={processing || !selectedFieldId}
           className="btn btn-primary btn-large"
         >
-          {processing ? 'Processing...' : 'Start Rename'}
+          {processing ? '处理中...' : '开始重命名'}
         </button>
 
         {progress && (
           <div className="progress-box">
             <div className="progress-text">
-              Processing: {progress.current} / {progress.total}
+              正在处理：{progress.current} / {progress.total}
             </div>
             <div className="progress-bar">
               <div
@@ -261,10 +261,10 @@ function App() {
 
         {result && (
           <div className="result-box">
-            <h3>Processing Complete</h3>
-            <p>Success: <strong>{result.success}</strong> records</p>
+            <h3>处理完成</h3>
+            <p>成功：<strong>{result.success}</strong> 条记录</p>
             {result.failed > 0 && (
-              <p>Failed: <strong>{result.failed}</strong> records</p>
+              <p>失败：<strong>{result.failed}</strong> 条记录</p>
             )}
           </div>
         )}
@@ -277,7 +277,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>Only modifies attachment display name, does not affect the original file</p>
+        <p>仅修改附件显示名称，不影响原始文件</p>
       </footer>
     </div>
   )
