@@ -29,16 +29,22 @@ function LinkGeneratorPage({ onBack }: { onBack: () => void }) {
       const table = await bitable.base.getActiveTable()
       const fields = await table.getFieldMetaList()
 
+      console.log('所有字段列表:', fields)
+
       // 过滤文本字段
       const textFieldList = fields.filter(f => f.type === 1) // type 1 是文本字段
-      setTextFields(textFieldList.map(f => ({
+      const mappedFields = textFieldList.map(f => ({
         field_id: f.id,
         name: f.name,
         type: f.type
-      })))
+      }))
+      setTextFields(mappedFields)
 
-      if (textFieldList.length > 0) {
-        setSelectedFieldId(textFieldList[0].id)
+      console.log('文本字段列表:', mappedFields)
+
+      if (mappedFields.length > 0) {
+        setSelectedFieldId(mappedFields[0].field_id)
+        console.log('默认选择字段:', mappedFields[0])
       } else {
         setError('未找到文本字段，请先在表格中创建一个文本列用于存储链接')
       }
@@ -64,6 +70,22 @@ function LinkGeneratorPage({ onBack }: { onBack: () => void }) {
       setResult(null)
 
       const table = await bitable.base.getActiveTable()
+      const fields = await table.getFieldMetaList()
+
+      // 验证选择的字段是否存在
+      const selectedField = fields.find(f => f.id === selectedFieldId)
+      if (!selectedField) {
+        setError(`选择的字段不存在，请刷新页面重新选择`)
+        setProcessing(false)
+        return
+      }
+
+      console.log('选择的字段:', {
+        field_id: selectedFieldId,
+        name: selectedField.name,
+        type: selectedField.type
+      })
+
       const recordIds = await table.getRecordIdList()
 
       const tableId = table.id
@@ -89,12 +111,11 @@ function LinkGeneratorPage({ onBack }: { onBack: () => void }) {
         for (const recordId of batch) {
           try {
             // 使用 bitable.bridge.getBitableUrl 生成记录链接
-            // fieldId 是必需参数，我们使用空字符串表示不指定特定字段
             const recordLink = await bitable.bridge.getBitableUrl({
               tableId: tableId,
               viewId: viewId,
               recordId: recordId,
-              fieldId: '' // 不指定特定字段
+              fieldId: selectedFieldId // 指定字段 ID
             })
 
             console.log(`记录 ${recordId} 链接:`, recordLink)
