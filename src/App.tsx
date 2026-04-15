@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { bitable, FieldType } from '@lark-base-open/js-sdk'
 
-// 附件字段类型编号
 const ATTACHMENT_FIELD_TYPE = 19
 
 interface AttachmentField {
@@ -18,7 +17,6 @@ interface Attachment {
 }
 
 function App() {
-  // 状态
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [attachmentFields, setAttachmentFields] = useState<AttachmentField[]>([])
@@ -29,7 +27,6 @@ function App() {
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const [result, setResult] = useState<{ success: number; failed: number } | null>(null)
 
-  // 初始化：获取当前表格的附件字段
   useEffect(() => {
     initPlugin()
   }, [])
@@ -39,15 +36,12 @@ function App() {
       setLoading(true)
       setError(null)
 
-      // 1. 获取当前激活的表格
       const table = await bitable.base.getActiveTable()
-
-      // 2. 获取所有字段，找出附件字段
       const fields = await table.getFieldMetaList()
       const attachmentFieldsList = fields.filter(f => f.type === ATTACHMENT_FIELD_TYPE)
 
       if (attachmentFieldsList.length === 0) {
-        setError('当前表格没有附件字段')
+        setError('No attachment field found')
         setLoading(false)
         return
       }
@@ -58,23 +52,21 @@ function App() {
         type: f.type
       })))
 
-      // 默认选择第一个附件字段
       if (attachmentFieldsList.length > 0) {
         setSelectedFieldId(attachmentFieldsList[0].id)
       }
 
       setLoading(false)
     } catch (err) {
-      console.error('初始化失败:', err)
-      setError(`初始化失败: ${err instanceof Error ? err.message : '未知错误}`)
+      console.error('Initialization failed:', err)
+      setError(`Initialization failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
       setLoading(false)
     }
   }
 
-  // 重命名附件
   const handleRename = async () => {
     if (!selectedFieldId) {
-      setError('请先选择一个附件字段')
+      setError('Please select an attachment field first')
       return
     }
 
@@ -83,13 +75,8 @@ function App() {
       setError(null)
       setResult(null)
 
-      // 1. 获取当前表格
       const table = await bitable.base.getActiveTable()
-
-      // 2. 获取所选字段
       const field = await table.getField(selectedFieldId)
-
-      // 3. 获取所有记录ID
       const recordIds = await table.getRecordIdList()
       const total = recordIds.length
 
@@ -97,21 +84,17 @@ function App() {
       let failedCount = 0
       let globalIndex = startNumber
 
-      // 4. 遍历每条记录
       for (let i = 0; i < recordIds.length; i++) {
         const recordId = recordIds[i]
 
         setProgress({ current: i + 1, total })
 
         try {
-          // 获取该记录的附件值
           const attachments = await field.getValue(recordId) as Attachment[] | null
 
           if (attachments && attachments.length > 0) {
-            // 重命名每个附件
             const renamedAttachments = attachments.map((att) => {
-              // 获取原文件名和扩展名
-              const originalName = att.name || '未命名'
+              const originalName = att.name || 'unnamed'
               const lastDot = originalName.lastIndexOf('.')
               const ext = lastDot > 0 ? originalName.substring(lastDot) : ''
               const newName = prefix ? `${prefix}_${globalIndex}${ext}` : `${globalIndex}${ext}`
@@ -125,12 +108,11 @@ function App() {
               }
             })
 
-            // 更新字段值
             await field.setValue(recordId, renamedAttachments)
             successCount++
           }
         } catch (err) {
-          console.error(`处理记录 ${recordId} 失败:`, err)
+          console.error(`Failed to process record ${recordId}:`, err)
           failedCount++
         }
       }
@@ -139,35 +121,33 @@ function App() {
       setProgress(null)
       setProcessing(false)
     } catch (err) {
-      console.error('重命名失败:', err)
-      setError(`重命名失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      console.error('Rename failed:', err)
+      setError(`Rename failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
       setProcessing(false)
       setProgress(null)
     }
   }
 
-  // 渲染加载状态
   if (loading) {
     return (
       <div className="container">
         <div className="loading">
           <div className="spinner"></div>
-          <p>正在初始化插件...</p>
+          <p>Initializing plugin...</p>
         </div>
       </div>
     )
   }
 
-  // 渲染错误状态
   if (error && attachmentFields.length === 0) {
     return (
       <div className="container">
         <div className="error-box">
-          <h3>⚠️ 出错了</h3>
+          <h3>Error</h3>
           <p>{error}</p>
-          <p className="hint">提示：确保从飞书多维表格的「插件」入口打开本插件</p>
+          <p className="hint">Please ensure this plugin is opened from the Feishu Bitable plugin entry</p>
           <button onClick={initPlugin} className="btn btn-primary">
-            重新加载
+            Reload
           </button>
         </div>
       </div>
@@ -177,14 +157,13 @@ function App() {
   return (
     <div className="container">
       <header className="header">
-        <h1>📎 附件批量重命名</h1>
-        <p className="subtitle">飞书多维表格插件</p>
+        <h1>Attachment Batch Rename</h1>
+        <p className="subtitle">Feishu Bitable Plugin</p>
       </header>
 
       <main className="main">
-        {/* 字段选择 */}
         <div className="form-group">
-          <label htmlFor="field-select">选择附件字段</label>
+          <label htmlFor="field-select">Select Attachment Field</label>
           <select
             id="field-select"
             value={selectedFieldId}
@@ -197,26 +176,24 @@ function App() {
               </option>
             ))}
           </select>
-          <span className="field-count">共 {attachmentFields.length} 个附件字段</span>
+          <span className="field-count">{attachmentFields.length} attachment fields found</span>
         </div>
 
-        {/* 前缀设置 */}
         <div className="form-group">
-          <label htmlFor="prefix">文件名前缀</label>
+          <label htmlFor="prefix">File Name Prefix</label>
           <input
             id="prefix"
             type="text"
             value={prefix}
             onChange={(e) => setPrefix(e.target.value)}
-            placeholder="留空则只保留序号"
+            placeholder="Leave empty to keep only the serial number"
             disabled={processing}
           />
-          <span className="hint">例如：填写"文档"，结果为"文档_1.jpg"</span>
+          <span className="hint">e.g. enter "doc", result is "doc_1.jpg"</span>
         </div>
 
-        {/* 起始序号 */}
         <div className="form-group">
-          <label htmlFor="start-number">起始序号</label>
+          <label htmlFor="start-number">Start Number</label>
           <input
             id="start-number"
             type="number"
@@ -225,23 +202,21 @@ function App() {
             onChange={(e) => setStartNumber(parseInt(e.target.value) || 0)}
             disabled={processing}
           />
-          <span className="hint">附件将在此基础上累加编号</span>
+          <span className="hint">Attachments will be numbered from this value</span>
         </div>
 
-        {/* 重命名按钮 */}
         <button
           onClick={handleRename}
           disabled={processing || !selectedFieldId}
           className="btn btn-primary btn-large"
         >
-          {processing ? '处理中...' : '🚀 开始重命名'}
+          {processing ? 'Processing...' : 'Start Rename'}
         </button>
 
-        {/* 进度显示 */}
         {progress && (
           <div className="progress-box">
             <div className="progress-text">
-              正在处理: {progress.current} / {progress.total}
+              Processing: {progress.current} / {progress.total}
             </div>
             <div className="progress-bar">
               <div
@@ -252,18 +227,16 @@ function App() {
           </div>
         )}
 
-        {/* 结果显示 */}
         {result && (
           <div className="result-box">
-            <h3>✅ 处理完成</h3>
-            <p>成功处理: <strong>{result.success}</strong> 条记录</p>
+            <h3>Processing Complete</h3>
+            <p>Success: <strong>{result.success}</strong> records</p>
             {result.failed > 0 && (
-              <p>失败: <strong>{result.failed}</strong> 条记录</p>
+              <p>Failed: <strong>{result.failed}</strong> records</p>
             )}
           </div>
         )}
 
-        {/* 错误提示 */}
         {error && attachmentFields.length > 0 && (
           <div className="error-box">
             <p>{error}</p>
@@ -272,7 +245,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>仅修改附件显示名称，不影响文件本体</p>
+        <p>Only modifies attachment display name, does not affect the original file</p>
       </footer>
     </div>
   )
