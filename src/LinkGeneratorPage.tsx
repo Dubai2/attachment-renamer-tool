@@ -111,7 +111,6 @@ function LinkGeneratorPage({ onBack }: { onBack: () => void }) {
         for (const recordId of batch) {
           try {
             // 使用 bitable.bridge.getBitableUrl 生成正确的记录链接
-            // fieldId 参数是必需的，传入空字符串表示不定位到特定字段
             const recordLink = await bitable.bridge.getBitableUrl({
               tableId: tableId,
               viewId: viewId,
@@ -120,10 +119,14 @@ function LinkGeneratorPage({ onBack }: { onBack: () => void }) {
             })
 
             console.log(`记录 ${recordId} 链接:`, recordLink)
-            console.log(`尝试写入字段: ${selectedFieldId}`)
+            console.log(`尝试更新记录，字段ID: ${selectedFieldId}`)
 
-            // 写入到指定字段
-            await table.setCellValue(recordId, selectedFieldId, recordLink)
+            // 使用 setRecord 方法更新记录
+            await table.setRecord(recordId, {
+              fields: {
+                [selectedFieldId]: recordLink
+              }
+            })
             console.log(`记录 ${recordId} 写入成功`)
             successCount++
           } catch (err) {
