@@ -25,7 +25,7 @@ function App() {
   const [startNumber, setStartNumber] = useState<number>(1)
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
-  const [result, setResult] = useState<{ success: number; failed: number; skipped: number } | null>(null)
+  const [result, setResult] = useState<{ success: number; failed: number; skipped: number; preview: Array<{oldName: string; newName: string}> } | null>(null)
   const [debugInfo, setDebugInfo] = useState<string>('')
 
   useEffect(() => {
@@ -99,65 +99,112 @@ function App() {
 
       console.log('开始重命名，总记录数:', total)
 
+      // 第一步：收集所有附件，找到最大序号
+      console.log('第一步：扫描所有附件...')
+      const allAttachments: Array<{ recordId: string; attachment: Attachment }> = []
+      
+      for (const recordId of recordIds) {
+        const attachments = await field.getValue(recordId) as Attachment[] | null
+        if (attachments && attachments.length > 0) {
+          attachments.forEach(att => {
+            allAttachments.push({ recordId, attachment: att })
+          })
+        }
+      }
+      
+      console.log(`共找到 ${allAttachments.length} 个附件`)
+      
+      // 找到符合当前前缀的最大序号
+      let maxNumber = startNumber - 1 // 默认从用户设置的起始号开始
+      if (prefix) {
+        allAttachments.forEach(({ attachment }) => {
+          const name = attachment.name
+          if (name.startsWith(prefix + '_')) {
+            const match = name.match(new RegExp(`^${prefix}_(\\d+)`))
+            if (match) {
+              const num = parseInt(match[1])
+              if (num > maxNumber) {
+                maxNumber = num
+              }
+            }
+          }
+        })
+        console.log(`最大序号: ${maxNumber}, 将从 ${maxNumber + 1} 开始`)
+      }
+      
+      let globalIndex = maxNumber + 1
+      
+      // 第二步：筛选不符合前缀的附件
+      console.log('第二步：筛选不符合前缀的附件...')
+      const needRename = allAttachments.filter(({ attachment }) => {
+        if (!prefix) return true // 没有前缀，全部需要重命名
+        return !attachment.name.startsWith(prefix + '_')
+      })
+      
+      console.log(`需要重命名 ${needRename.length} 个附件`)
+      
+      // 显示预览（前10个）
+      const preview = needRename.slice(0, 10).map(({ attachment }) => {
+        const originalName = attachment.name
+        const lastDot = originalName.lastIndexOf('.')
+        const ext = lastDot > 0 ? originalName.substring(lastDot) : ''
+        const newName = prefix ? `${prefix}_${globalIndex}${ext}` : `${globalIndex}${ext}`
+        const previewItem = { oldName: originalName, newName: newName }
+        globalIndex++
+        return previewItem
+      })
+      
+      console.log('预览:', preview)
+      
+      // 第三步：执行重命名
+      console.log('第三步：开始重命名...')
       let successCount = 0
       let failedCount = 0
       let skippedCount = 0
-      let globalIndex = startNumber
-
+      
+      // 按记录分组
+      const recordMap = new Map<string, Array<Attachment>>()
+      needRename.forEach(({ recordId, attachment }) => {
+        const originalName = attachment.name
+        const lastDot = originalName.lastIndexOf('.')
+        const ext = lastDot > 0 ? originalName.substring(lastDot) : ''
+        const newName = prefix ? `${prefix}_${globalIndex}${ext}` : `${globalIndex}${ext}`
+        
+        const renamedAttachment = { ...attachment, name: newName }
+        
+        if (!recordMap.has(recordId)) {
+          recordMap.set(recordId, [])
+        }
+        recordMap.get(recordId)!.push(renamedAttachment)
+        
+        globalIndex++
+      })
+      
+      // 更新记录
       for (let i = 0; i < recordIds.length; i++) {
         const recordId = recordIds[i]
-
         setProgress({ current: i + 1, total })
-
-        try {
-          console.log(`处理记录 ${i+1}/${total}, recordId: ${recordId}`)
-          const attachments = await field.getValue(recordId) as Attachment[] | null
-          console.log(`获取到附件数量:`, attachments?.length || 0)
-
-          if (attachments && attachments.length > 0) {
-            const renamedAttachments = attachments.map((att) => {
-              const originalName = att.name || 'unnamed'
-              
-              // 检查是否已经有指定前缀
-              if (prefix && originalName.startsWith(prefix + '_')) {
-                console.log(`跳过: ${originalName} (已有前缀 ${prefix})`)
-                skippedCount++
-                return att  // 不修改，直接返回原始附件对象
-              }
-
-              const lastDot = originalName.lastIndexOf('.')
-              const ext = lastDot > 0 ? originalName.substring(lastDot) : ''
-              const newName = prefix ? `${prefix}_${globalIndex}${ext}` : `${globalIndex}${ext}`
-              console.log(`重命名: ${originalName} -> ${newName}`)
-              globalIndex++
-
-              // 保留原始附件的所有属性，只修改name字段
-              return {
-                ...att,
-                name: newName
-              }
-            })
-
-            // 检查是否有需要重命名的附件
-            const hasModifiedAttachments = renamedAttachments.some(att => att.name !== (attachments.find(a => a.file_token === att.file_token)?.name))
-            
-            if (hasModifiedAttachments) {
-              await field.setValue(recordId, renamedAttachments)
-              console.log(`记录 ${recordId} 更新成功`)
-              successCount++
-            } else {
-              console.log(`记录 ${recordId} 所有附件都有前缀，跳过`)
-              skippedCount++
-            }
+        
+        if (recordMap.has(recordId)) {
+          try {
+            await field.setValue(recordId, recordMap.get(recordId)!)
+            console.log(`记录 ${recordId} 更新成功`)
+            successCount++
+          } catch (err) {
+            console.error(`记录 ${recordId} 更新失败:`, err)
+            failedCount++
           }
-        } catch (err) {
-          console.error(`Failed to process record ${recordId}:`, err)
-          console.error('错误详情:', JSON.stringify(err, null, 2))
-          failedCount++
         }
       }
+      
+      skippedCount = allAttachments.length - needRename.length
 
-      setResult({ success: successCount, failed: failedCount, skipped: skippedCount })
+      setResult({ 
+        success: successCount, 
+        failed: failedCount, 
+        skipped: skippedCount,
+        preview: preview
+      })
       setProgress(null)
       setProcessing(false)
     } catch (err) {
@@ -292,6 +339,21 @@ function App() {
             )}
             {result.skipped > 0 && (
               <p>跳过：<strong>{result.skipped}</strong> 个附件（已有前缀）</p>
+            )}
+            {result.preview && result.preview.length > 0 && (
+              <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>预览（前10个）</h4>
+                {result.preview.map((item, index) => (
+                  <div key={index} style={{ fontSize: '12px', marginBottom: '5px' }}>
+                    {item.oldName} → <strong>{item.newName}</strong>
+                  </div>
+                ))}
+                {result.preview.length === 10 && (
+                  <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+                    ... 还有 {result.preview.length > 10 ? '更多' : ''}附件待处理
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}
