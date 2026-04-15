@@ -341,16 +341,23 @@ function App() {
               <p>跳过：<strong>{result.skipped}</strong> 个附件（已有前缀）</p>
             )}
             {result.preview && result.preview.length > 0 && (
-              <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>预览（前10个）</h4>
+              <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: 'bold' }}>修改记录预览（前10个）</h4>
                 {result.preview.map((item, index) => (
-                  <div key={index} style={{ fontSize: '12px', marginBottom: '5px' }}>
-                    {item.oldName} → <strong>{item.newName}</strong>
+                  <div key={index} style={{ fontSize: '13px', marginBottom: '8px', padding: '8px', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '3px' }}>
+                    <div>
+                      <span style={{ color: '#999' }}>修改前：</span>
+                      <span style={{ marginLeft: '8px' }}>{item.oldName}</span>
+                    </div>
+                    <div style={{ marginTop: '5px' }}>
+                      <span style={{ color: '#1890ff' }}>修改后：</span>
+                      <span style={{ marginLeft: '8px', fontWeight: 'bold', color: '#1890ff' }}>{item.newName}</span>
+                    </div>
                   </div>
                 ))}
                 {result.preview.length === 10 && (
-                  <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-                    ... 还有 {result.preview.length > 10 ? '更多' : ''}附件待处理
+                  <p style={{ fontSize: '12px', color: '#666', marginTop: '10px', fontStyle: 'italic' }}>
+                    * 仅显示前10个附件的修改记录
                   </p>
                 )}
               </div>
