@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { bitable, FieldType } from '@lark-base-open/js-sdk'
+import { bitable } from '@lark-base-open/js-sdk'
 
 const ATTACHMENT_FIELD_TYPE = 19
 
