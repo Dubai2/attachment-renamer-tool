@@ -110,13 +110,8 @@ function LinkGeneratorPage({ onBack }: { onBack: () => void }) {
 
         for (const recordId of batch) {
           try {
-            // 使用 bitable.bridge.getBitableUrl 生成记录链接
-            const recordLink = await bitable.bridge.getBitableUrl({
-              tableId: tableId,
-              viewId: viewId,
-              recordId: recordId,
-              fieldId: selectedFieldId // 指定字段 ID
-            })
+            // 生成记录链接：https://domain/record/{recordId}
+            const recordLink = `https://lpitp64gvb.feishu.cn/record/${recordId}`
 
             console.log(`记录 ${recordId} 链接:`, recordLink)
 
