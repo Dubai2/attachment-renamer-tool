@@ -10,51 +10,22 @@
 
 /* 头部 */
 .header {
+  text-align: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px solid #e5e5e5;
 }
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  text-align: left;
-}
-
-.header-content h1 {
+.header h1 {
   font-size: 20px;
   font-weight: 600;
   color: #1f2329;
   margin-bottom: 4px;
 }
 
-.header-content .subtitle {
+.header .subtitle {
   font-size: 13px;
   color: #86909c;
-}
-
-/* 退出登录按钮 */
-.logout-btn {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #ff4d4f;
-  background: #fff;
-  border: 1px solid #ff4d4f;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.logout-btn:hover {
-  background: #ff4d4f;
-  color: #fff;
-}
-
-.logout-btn:active {
-  background: #cf1322;
 }
 
 /* 主内容区 */
@@ -230,7 +201,7 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #165dff, #4e9bff);
+  background: #3370ff;
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -280,13 +251,8 @@
     padding: 16px;
   }
 
-  .header-content h1 {
+  .header h1 {
     font-size: 18px;
-  }
-
-  .logout-btn {
-    padding: 6px 12px;
-    font-size: 12px;
   }
 
   .feature-grid {
@@ -306,23 +272,21 @@
 /* 功能卡片 */
 .feature-card {
   background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  padding: 24px;
+  border: 1px solid #dee0e3;
+  border-radius: 8px;
+  padding: 20px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .feature-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: #165dff;
+  border-color: #3370ff;
+  background: #f8f9fa;
 }
 
 .feature-card:active {
-  transform: translateY(0);
+  background: #f0f0f0;
 }
 
 .feature-icon {

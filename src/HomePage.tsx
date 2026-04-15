@@ -1,19 +1,9 @@
-function HomePage({ onNavigate, onLogout }: { onNavigate: (page: string) => void; onLogout: () => void }) {
+function HomePage({ onNavigate }: { onNavigate: (page: string) => void }) {
   return (
     <div className="container">
       <header className="header">
-        <div className="header-content">
-          <div>
-            <h1>飞书多维表格工具箱</h1>
-            <p className="subtitle">选择你需要的功能</p>
-          </div>
-          <button className="logout-btn" onClick={(e) => {
-            e?.stopPropagation()
-            onLogout()
-          }}>
-            退出登录
-          </button>
-        </div>
+        <h1>飞书多维表格工具箱</h1>
+        <p className="subtitle">选择你需要的功能</p>
       </header>
 
       <main className="main">
