@@ -10,7 +10,7 @@ interface AttachmentField {
 }
 
 interface Attachment {
-  file_token: string
+  token: string
   name: string
   size?: number
   mime_type?: string
@@ -110,11 +110,6 @@ function RenamePage({ onBack }: { onBack: () => void }) {
       for (const recordId of recordIds) {
         const attachments = await field.getValue(recordId) as Attachment[] | null
         if (attachments && attachments.length > 0) {
-          // 打印第一个附件的完整结构来确认字段名
-          if (allAttachments.length === 0) {
-            console.log('第一个附件的完整结构:', JSON.stringify(attachments[0], null, 2))
-            console.log('附件的所有键:', Object.keys(attachments[0]))
-          }
           attachments.forEach(att => {
             allAttachments.push({ recordId, attachment: att })
           })
@@ -249,7 +244,6 @@ function RenamePage({ onBack }: { onBack: () => void }) {
             const currentAttachments = await field.getValue(recordId) as Attachment[] | null
 
             console.log(`记录 ${recordId} 当前附件数:`, currentAttachments?.length)
-            console.log('当前附件列表:', currentAttachments?.map(a => `${a.name} (${a.file_token})`))
 
             // 如果没有附件，跳过
             if (!currentAttachments || currentAttachments.length === 0) {
@@ -259,34 +253,20 @@ function RenamePage({ onBack }: { onBack: () => void }) {
 
             // 构建新的附件数组：保留不需要重命名的，替换需要重命名的
             const renameList = recordMap.get(recordId)!
-            console.log(`需要重命名的附件数:`, renameList.length)
-            console.log('重命名列表:', renameList.map(r => `${r.original.name} (${r.original.file_token}) -> ${r.renamed.name}`))
 
             const renameMap = new Map<string, Attachment>()
             renameList.forEach(({ original, renamed }) => {
-              renameMap.set(original.file_token, renamed)
-              console.log(`添加映射: ${original.file_token} -> ${renamed.name}`)
+              renameMap.set(original.token, renamed)
             })
-
-            console.log(`映射表大小: ${renameMap.size}`)
-            console.log(`映射表键:`, Array.from(renameMap.keys()))
 
             const newAttachments = currentAttachments.map(att => {
-              console.log(`处理附件: ${att.name} (${att.file_token}), 是否在映射表中: ${renameMap.has(att.file_token)}`)
-
               // 如果是需要重命名的附件，使用重命名后的
-              if (renameMap.has(att.file_token)) {
-                const renamed = renameMap.get(att.file_token)!
-                console.log(`  -> 匹配成功，替换为: ${renamed.name}`)
-                return renamed
+              if (renameMap.has(att.token)) {
+                return renameMap.get(att.token)!
               }
               // 否则保持原样
-              console.log(`  -> 未匹配，保持原样`)
               return att
             })
-
-            console.log(`新附件列表:`, newAttachments.map(a => a.name))
-            console.log(`新旧数量对比: ${currentAttachments.length} -> ${newAttachments.length}`)
 
             await field.setValue(recordId, newAttachments)
             console.log(`记录 ${recordId} 更新成功`)
