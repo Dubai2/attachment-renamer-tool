@@ -209,38 +209,63 @@ function RenamePage({ onBack }: { onBack: () => void }) {
       console.log('预览:', preview)
       
       // 按记录分组（使用相同的起始序号）
-      const recordMap = new Map<string, Array<Attachment>>()
+      const recordMap = new Map<string, Array<{ original: Attachment, renamed: Attachment }>>()
       let renameIndex = startIndex // 使用相同的起始序号
-      
+
       searchResult.forEach(({ recordId, attachment }) => {
         const originalName = attachment.name
         const lastDot = originalName.lastIndexOf('.')
         const ext = lastDot > 0 ? originalName.substring(lastDot) : ''
         const newName = prefix ? `${prefix}_${renameIndex}${ext}` : `${renameIndex}${ext}`
-        
+
         const renamedAttachment = { ...attachment, name: newName }
-        
+
         if (!recordMap.has(recordId)) {
           recordMap.set(recordId, [])
         }
-        recordMap.get(recordId)!.push(renamedAttachment)
-        
+        recordMap.get(recordId)!.push({ original: attachment, renamed: renamedAttachment })
+
         renameIndex++
       })
-      
+
       // 更新记录
       const recordIds = await table.getRecordIdList()
       let successCount = 0
       let failedCount = 0
       let skippedCount = 0
-      
+
       for (let i = 0; i < recordIds.length; i++) {
         const recordId = recordIds[i]
         setProgress({ current: i + 1, total: recordIds.length })
-        
+
         if (recordMap.has(recordId)) {
           try {
-            await field.setValue(recordId, recordMap.get(recordId)!)
+            // 获取当前记录的所有附件
+            const currentAttachments = await field.getValue(recordId) as Attachment[] | null
+
+            // 如果没有附件，跳过
+            if (!currentAttachments || currentAttachments.length === 0) {
+              skippedCount++
+              continue
+            }
+
+            // 构建新的附件数组：保留不需要重命名的，替换需要重命名的
+            const renameList = recordMap.get(recordId)!
+            const renameMap = new Map<string, Attachment>()
+            renameList.forEach(({ original, renamed }) => {
+              renameMap.set(original.file_token, renamed)
+            })
+
+            const newAttachments = currentAttachments.map(att => {
+              // 如果是需要重命名的附件，使用重命名后的
+              if (renameMap.has(att.file_token)) {
+                return renameMap.get(att.file_token)!
+              }
+              // 否则保持原样
+              return att
+            })
+
+            await field.setValue(recordId, newAttachments)
             console.log(`记录 ${recordId} 更新成功`)
             successCount++
           } catch (err) {
