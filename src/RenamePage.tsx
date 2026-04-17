@@ -110,6 +110,11 @@ function RenamePage({ onBack }: { onBack: () => void }) {
       for (const recordId of recordIds) {
         const attachments = await field.getValue(recordId) as Attachment[] | null
         if (attachments && attachments.length > 0) {
+          // 打印第一个附件的完整结构来确认字段名
+          if (allAttachments.length === 0) {
+            console.log('第一个附件的完整结构:', JSON.stringify(attachments[0], null, 2))
+            console.log('附件的所有键:', Object.keys(attachments[0]))
+          }
           attachments.forEach(att => {
             allAttachments.push({ recordId, attachment: att })
           })
