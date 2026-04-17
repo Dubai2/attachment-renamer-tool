@@ -243,6 +243,9 @@ function RenamePage({ onBack }: { onBack: () => void }) {
             // 获取当前记录的所有附件
             const currentAttachments = await field.getValue(recordId) as Attachment[] | null
 
+            console.log(`记录 ${recordId} 当前附件数:`, currentAttachments?.length)
+            console.log('当前附件列表:', currentAttachments?.map(a => `${a.name} (${a.file_token})`))
+
             // 如果没有附件，跳过
             if (!currentAttachments || currentAttachments.length === 0) {
               skippedCount++
@@ -251,19 +254,34 @@ function RenamePage({ onBack }: { onBack: () => void }) {
 
             // 构建新的附件数组：保留不需要重命名的，替换需要重命名的
             const renameList = recordMap.get(recordId)!
+            console.log(`需要重命名的附件数:`, renameList.length)
+            console.log('重命名列表:', renameList.map(r => `${r.original.name} (${r.original.file_token}) -> ${r.renamed.name}`))
+
             const renameMap = new Map<string, Attachment>()
             renameList.forEach(({ original, renamed }) => {
               renameMap.set(original.file_token, renamed)
+              console.log(`添加映射: ${original.file_token} -> ${renamed.name}`)
             })
 
+            console.log(`映射表大小: ${renameMap.size}`)
+            console.log(`映射表键:`, Array.from(renameMap.keys()))
+
             const newAttachments = currentAttachments.map(att => {
+              console.log(`处理附件: ${att.name} (${att.file_token}), 是否在映射表中: ${renameMap.has(att.file_token)}`)
+
               // 如果是需要重命名的附件，使用重命名后的
               if (renameMap.has(att.file_token)) {
-                return renameMap.get(att.file_token)!
+                const renamed = renameMap.get(att.file_token)!
+                console.log(`  -> 匹配成功，替换为: ${renamed.name}`)
+                return renamed
               }
               // 否则保持原样
+              console.log(`  -> 未匹配，保持原样`)
               return att
             })
+
+            console.log(`新附件列表:`, newAttachments.map(a => a.name))
+            console.log(`新旧数量对比: ${currentAttachments.length} -> ${newAttachments.length}`)
 
             await field.setValue(recordId, newAttachments)
             console.log(`记录 ${recordId} 更新成功`)
